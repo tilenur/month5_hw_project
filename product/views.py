@@ -30,7 +30,9 @@ def category_detail_api_view(request, pk):
 
 @api_view(['GET'])
 def product_list_api_view(request):
-    products = Product.objects.all()
+    products = (Product.objects.select_related('category')
+                .prefetch_related('reviews').all())
+    # products = Product.objects.all()
     data = ProductSerializer(products, many=True).data
     return Response(data=data)
 
