@@ -2,8 +2,9 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Category, Product, Review
-from .serializers import CategorySerializer, ProductSerializer, ReviewSerializer
+from .serializers import CategorySerializer, ProductSerializer, ReviewSerializer, CategoryValidateSerializer, ProductValidateSerializer, ReviewValidateSerializer
 from rest_framework import status
+from django.db import transaction
 
 # Create your views here.
 
@@ -20,8 +21,16 @@ def category_list_api_view(request):
             data=data
         )
     elif request.method == "POST":
+        # step 0: Validation (Existing, Typing, Extra)
+        serializer = CategoryValidateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                data=serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # step 1: recieve data
-        name = request.data.get("name")
+        name = serializer.validated_data.get("name")
 
         # step 2: create category
         category = Category.objects.create(
@@ -49,8 +58,18 @@ def category_detail_api_view(request, pk):
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     elif request.method == 'PUT':
-        category.name = request.data.get('name')
+        # step 0: Validation (Existing, Typing, Extra)
+        serializer = CategoryValidateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                data=serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        # step 1: recieve validated data
+        category.name = serializer.validated_data.get('name')
+        # step 2: update existing object
         category.save()
+        # step 3: return response
         return Response(
             status=status.HTTP_200_OK,
             data=CategorySerializer(category, many=False).data
@@ -65,11 +84,18 @@ def product_list_api_view(request):
         data = ProductSerializer(products, many=True).data
         return Response(data=data)
     elif request.method == 'POST':
+        # step 0: Validation (Existing, Typing, Extra)
+        serializer = ProductValidateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                data=serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
         # step 1: recieve data
-        title = request.data.get('title')
-        description = request.data.get('description')
-        price = request.data.get('price')
-        category_id = request.data.get('category_id')
+        title = serializer.validated_data.get('title')
+        description = serializer.validated_data.get('description')
+        price = serializer.validated_data.get('price')
+        category_id = serializer.validated_data.get('category_id')
 
         # step 2: create product
         product = Product.objects.create(
@@ -101,11 +127,21 @@ def product_detail_api_view(request, pk):
             status=status.HTTP_204_NO_CONTENT
         )
     elif request.method == 'PUT':
-        product.title = request.data.get('title')
-        product.description = request.data.get('description')
-        product.price = request.data.get('price')
-        product.category_id = request.data.get('category_id')
+        # step 0: Validation
+        serializer = ProductValidateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                data=serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        # step 1: Recieve validated data
+        product.title = serializer.validated_data.get('title')
+        product.description = serializer.validated_data.get('description')
+        product.price = serializer.validated_data.get('price')
+        product.category_id = serializer.validated_data.get('category_id')
+        # step 2: update existing object
         product.save()
+        # step 3: return response
         return Response(
             status=status.HTTP_200_OK,
             data=ProductSerializer(product, many=False).data
@@ -121,10 +157,18 @@ def review_list_api_view(request):
         # step 3: return response
         return Response(data=data)
     elif request.method == 'POST':
+        #step 0: Validation (Existing, Typing, Extra)
+        serializer = ReviewValidateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                data=serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # step 1: recieve data
-        text = request.data.get('text')
-        stars = request.data.get('stars')
-        product_id = request.data.get('product_id')
+        text = serializer.validated_data.get('text')
+        stars = serializer.validated_data.get('stars')
+        product_id = serializer.validated_data.get('product_id')
 
         # step 2: create review
         review = Review.objects.create(
@@ -154,10 +198,20 @@ def review_detail_api_view(request, pk):
         review.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     elif request.method == 'PUT':
-        review.text = request.data.get('text')
-        review.stars = request.data.get('stars')
-        review.product_id = request.data.get('product_id')
+        # step 0: Validate data
+        serializer = ReviewValidateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                data=serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        # step 1: recieve validated data
+        review.text = serializer.validated_data.get('text')
+        review.stars = serializer.validated_data.get('stars')
+        review.product_id = serializer.validated_data.get('product_id')
+        # step 2: update object
         review.save()
+        # step 3: return response
         return Response(
             status=status.HTTP_200_OK,
             data=ReviewSerializer(review, many=False).data
